@@ -19,6 +19,9 @@ export function registerPrefsScripts(window: Window) {
   const backupDirectory = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-backupDirectory`,
   ) as HTMLInputElement | null;
+  const renameMode = doc.querySelector(
+    `#zotero-prefpane-${addon.data.config.addonRef}-renameMode`,
+  ) as XUL.MenuList | null;
   const backend = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-backend`,
   ) as XUL.MenuList | null;
@@ -136,6 +139,17 @@ export function registerPrefsScripts(window: Window) {
       updateBackendState();
     });
   }
+  if (renameMode) {
+    const normalizedValue =
+      safeGetString("renameMode") === "title-and-file"
+        ? "title-and-file"
+        : "title-only";
+    renameMode.value = normalizedValue;
+    setPref("renameMode", normalizedValue);
+    renameMode.addEventListener("command", () => {
+      setPref("renameMode", renameMode.value as any);
+    });
+  }
 
   const renameDocLink = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-renameDocLink`,
@@ -190,6 +204,7 @@ function safeGetString(
     | "titleTemplate"
     | "keywordPattern"
     | "backupDirectory"
+    | "renameMode"
     | "libreOfficePath"
     | "backend",
 ): string {

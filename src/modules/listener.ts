@@ -6,6 +6,8 @@ export class EventListener {
   private static notifierID = "";
   private static timers = new Map<number, ReturnType<typeof setTimeout>>();
   private static running = new Set<number>();
+  private static queue: number[] = [];
+  private static draining = false;
   private static readonly delayMs = 1500;
 
   static register() {
@@ -57,6 +59,8 @@ export class EventListener {
     }
     this.timers.clear();
     this.running.clear();
+    this.queue = [];
+    this.draining = false;
   }
 
   private static schedule(itemID: number) {
@@ -65,25 +69,37 @@ export class EventListener {
     }
     const timerID = setTimeout(() => {
       this.timers.delete(itemID);
-      void this.run(itemID);
+      this.queue.push(itemID);
+      void this.drainQueue();
     }, this.delayMs);
     this.timers.set(itemID, timerID);
   }
 
-  private static async run(itemID: number) {
-    if (this.running.has(itemID)) {
+  private static async drainQueue() {
+    if (this.draining) {
       return;
     }
-    this.running.add(itemID);
+    this.draining = true;
     try {
-      await Processor.processItem(itemID);
-    } catch (error) {
-      Logger.error("Processing queued attachment failed", {
-        itemID,
-        error: String(error),
-      });
+      while (this.queue.length) {
+        const itemID = this.queue.shift();
+        if (!itemID || this.running.has(itemID)) {
+          continue;
+        }
+        this.running.add(itemID);
+        try {
+          await Processor.processItem(itemID);
+        } catch (error) {
+          Logger.error("Processing queued attachment failed", {
+            itemID,
+            error: String(error),
+          });
+        } finally {
+          this.running.delete(itemID);
+        }
+      }
     } finally {
-      this.running.delete(itemID);
+      this.draining = false;
     }
   }
 }

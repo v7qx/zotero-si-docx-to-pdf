@@ -58,6 +58,22 @@
     </vbox>
     <vbox style="margin: 0 0 18px 0;">
       <hbox align="center">
+        <html:label data-l10n-id="pref-renameMode"></html:label>
+        <menulist
+          id="zotero-prefpane-__addonRef__-renameMode"
+          preference="renameMode"
+          flex="1"
+        >
+          <menupopup>
+            <menuitem value="title-only" data-l10n-id="pref-renameMode-titleOnly" />
+            <menuitem value="title-and-file" data-l10n-id="pref-renameMode-titleAndFile" />
+          </menupopup>
+        </menulist>
+      </hbox>
+      <description data-l10n-id="pref-renameMode-note"></description>
+    </vbox>
+    <vbox style="margin: 0 0 18px 0;">
+      <hbox align="center">
         <html:label data-l10n-id="pref-backend"></html:label>
         <menulist
           id="zotero-prefpane-__addonRef__-backend"

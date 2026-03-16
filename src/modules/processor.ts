@@ -34,17 +34,27 @@ export class Processor {
       const imported = await ZoteroItems.importPdf(
         candidate.parentItem,
         conversion.outputPath,
-        title,
       );
-      await ZoteroItems.renameImportedPdf(imported, title);
-      const importedPath = await imported.getFilePathAsync();
-      if (!importedPath || !ZoteroItems.fileExists(importedPath)) {
-        throw new Error("Imported PDF attachment is missing on disk");
-      }
+      const finalTitle = await ZoteroItems.applyImportedPdfNaming(
+        candidate.parentItem,
+        imported,
+        title,
+        prefs.renameMode,
+      );
+      const importedPath = await ZoteroItems.verifyImportedPdfAttachment(
+        imported,
+        candidate.parentItem,
+      );
       if (prefs.deleteOriginal) {
+        const originalPath = await ZoteroItems.verifyOriginalAttachmentBeforeDelete(
+          candidate.attachment,
+          candidate.parentItem,
+          candidate.filePath,
+          importedPath,
+        );
         if (prefs.backupBeforeDelete) {
           const backupPath = FileSystem.backupFile(
-            candidate.filePath,
+            originalPath,
             prefs.backupDirectory,
           );
           Logger.debug("Backed up original Word attachment before deletion", {
@@ -55,7 +65,7 @@ export class Processor {
         await candidate.attachment.eraseTx();
       }
       if (prefs.showNotifications) {
-        ZoteroItems.notify(`已自动转换 SI 附件：${candidate.fileName}`);
+        ZoteroItems.notify(`已自动转换 SI 附件：${finalTitle}`);
       }
     } finally {
       Converter.cleanup(conversion);
@@ -144,6 +154,9 @@ export class Processor {
       message.includes("LibreOffice executable not found")
     ) {
       return "转换失败：请检查 LibreOffice 路径是否选择了 soffice.exe，而不是 swriter.exe 或 soffice_safe.exe。";
+    }
+    if (message.includes("process-failed")) {
+      return "转换失败：LibreOffice 进程执行失败。批量导入多个 DOCX 时已改为串行处理；如果仍出现，请先关闭正在打开的 LibreOffice 文档后重试。";
     }
     return `转换失败：${message}`;
   }

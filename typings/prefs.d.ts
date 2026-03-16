@@ -11,6 +11,7 @@ declare namespace _ZoteroTypes {
       "backupBeforeDelete": boolean;
       "backupDirectory": string;
       "titleTemplate": string;
+      "renameMode": string;
       "backend": string;
       "libreOfficePath": string;
       "showNotifications": boolean;

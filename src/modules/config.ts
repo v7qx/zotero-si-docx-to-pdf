@@ -2,6 +2,7 @@ import { getPref, setPref } from "../utils/prefs";
 import { FileSystem } from "./fs";
 
 export type Backend = "libreoffice" | "word-windows-only";
+export type RenameMode = "title-only" | "title-and-file";
 
 function defaultBackend(): Backend {
   return Zotero.isWin ? "word-windows-only" : "libreoffice";
@@ -12,6 +13,7 @@ export interface PluginPrefs {
   backupBeforeDelete: boolean;
   backupDirectory: string;
   titleTemplate: string;
+  renameMode: RenameMode;
   backend: Backend;
   libreOfficePath: string;
   showNotifications: boolean;
@@ -27,6 +29,7 @@ export const DEFAULT_PREFS: PluginPrefs = {
   backupDirectory: "",
   titleTemplate:
     'SI-{{ year suffix="-" }}{{ authors max="1" suffix="-" }}{{ title truncate="100" }}',
+  renameMode: "title-only",
   backend: defaultBackend(),
   libreOfficePath: "",
   showNotifications: true,
@@ -47,6 +50,7 @@ export class PluginConfig {
       ),
       backupDirectory: this.getBackupDirectory(),
       titleTemplate: this.getString("titleTemplate", DEFAULT_PREFS.titleTemplate),
+      renameMode: this.getRenameMode("renameMode", DEFAULT_PREFS.renameMode),
       backend: this.getBackend("backend", DEFAULT_PREFS.backend),
       libreOfficePath: this.getLibreOfficePath(),
       showNotifications: this.getBool(
@@ -109,6 +113,16 @@ export class PluginConfig {
     }
     return value === "libreoffice" ||
       value === "word-windows-only"
+      ? value
+      : fallback;
+  }
+
+  private static getRenameMode(
+    key: keyof _ZoteroTypes.Prefs["PluginPrefsMap"],
+    fallback: RenameMode,
+  ): RenameMode {
+    const value = this.getString(key, fallback);
+    return value === "title-and-file" || value === "title-only"
       ? value
       : fallback;
   }

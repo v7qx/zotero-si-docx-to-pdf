@@ -1,7 +1,7 @@
 {
   "name": "zotero-si-docx-to-pdf",
   "type": "module",
-  "version": "0.0.19",
+  "version": "0.0.22",
   "description": "用于 Zotero 8 的 SI DOCX 附件转 PDF 插件。",
   "config": {
     "addonName": "Docx to PDF",

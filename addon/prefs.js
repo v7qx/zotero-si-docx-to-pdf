@@ -2,6 +2,7 @@ pref("deleteOriginal", false);
 pref("backupBeforeDelete", true);
 pref("backupDirectory", "");
 pref("titleTemplate", "SI-{{ year suffix=\"-\" }}{{ authors max=\"1\" suffix=\"-\" }}{{ title truncate=\"100\" }}");
+pref("renameMode", "title-only");
 pref("backend", "__default__");
 pref("libreOfficePath", "");
 pref("showNotifications", true);
