@@ -4,8 +4,12 @@ import { FileSystem } from "./fs";
 import { Logger } from "./logger";
 import { TitleTemplate } from "./template";
 import { CandidateContext, ZoteroItems } from "./zotero";
+import { getString } from "../utils/locale";
 
 export class Processor {
+  private static readonly FILE_READY_TIMEOUT_MS = 12000;
+  private static readonly FILE_READY_POLL_INTERVAL_MS = 500;
+
   static async processItem(itemID: number) {
     PluginConfig.ensureDefaults();
     const prefs = PluginConfig.getAll();
@@ -65,7 +69,7 @@ export class Processor {
         await candidate.attachment.eraseTx();
       }
       if (prefs.showNotifications) {
-        ZoteroItems.notify(`已自动转换 SI 附件：${finalTitle}`);
+        ZoteroItems.notify(getString("notify-converted", { args: { title: finalTitle } }));
       }
     } finally {
       Converter.cleanup(conversion);
@@ -80,16 +84,10 @@ export class Processor {
     if (!attachment || !attachment.isAttachment() || !attachment.parentItemID) {
       return null;
     }
-
-    await Zotero.Promise.delay(500);
-
-    const filePath = await attachment.getFilePathAsync();
-    const resolvedFilePath = typeof filePath === "string" ? filePath : "";
     const fileName =
       attachment.attachmentFilename ||
-      resolvedFilePath.split(/[\\/]/).pop() ||
       attachment.getField("title");
-    if (!resolvedFilePath || !fileName || !/\.(doc|docx)$/i.test(fileName)) {
+    if (!fileName || !/\.(doc|docx)$/i.test(fileName)) {
       return null;
     }
 
@@ -122,7 +120,15 @@ export class Processor {
       }
     }
     if (!hasSiblingPdf) {
+      if (prefs.showNotifications) {
+        ZoteroItems.notify(getString("notify-skip-no-pdf"));
+      }
       return null;
+    }
+
+    const resolvedFilePath = await this.waitForAttachmentFileReady(attachment);
+    if (!resolvedFilePath) {
+      throw new Error("Attachment file is not ready");
     }
 
     return {
@@ -147,17 +153,57 @@ export class Processor {
     }
   }
 
+  static isRetryableError(error: unknown): boolean {
+    return String(error).includes("Attachment file is not ready");
+  }
+
   private static buildConversionErrorMessage(error: unknown): string {
     const message = String(error);
     if (
       message.includes("Invalid LibreOffice executable") ||
       message.includes("LibreOffice executable not found")
     ) {
-      return "转换失败：请检查 LibreOffice 路径是否选择了 soffice.exe，而不是 swriter.exe 或 soffice_safe.exe。";
+      return getString("error-invalid-libreoffice-path");
     }
     if (message.includes("process-failed")) {
-      return "转换失败：LibreOffice 进程执行失败。批量导入多个 DOCX 时已改为串行处理；如果仍出现，请先关闭正在打开的 LibreOffice 文档后重试。";
+      return getString("error-libreoffice-process-failed");
     }
-    return `转换失败：${message}`;
+    return getString("error-conversion", { args: { message } });
+  }
+
+  private static async waitForAttachmentFileReady(
+    attachment: Zotero.Item,
+  ): Promise<string> {
+    const startedAt = Date.now();
+    let lastPath = "";
+    let lastSize = -1;
+    let stableChecks = 0;
+
+    while (Date.now() - startedAt < this.FILE_READY_TIMEOUT_MS) {
+      const filePath = await attachment.getFilePathAsync();
+      const resolvedPath = typeof filePath === "string" ? filePath : "";
+      if (resolvedPath && FileSystem.exists(resolvedPath)) {
+        const size = FileSystem.size(resolvedPath);
+        if (size > 0) {
+          if (resolvedPath === lastPath && size === lastSize) {
+            stableChecks += 1;
+          } else {
+            lastPath = resolvedPath;
+            lastSize = size;
+            stableChecks = 0;
+          }
+          if (stableChecks >= 1) {
+            return resolvedPath;
+          }
+        }
+      }
+      await Zotero.Promise.delay(this.FILE_READY_POLL_INTERVAL_MS);
+    }
+
+    Logger.warn("Attachment file was not ready before timeout", {
+      attachmentID: attachment.id,
+      fileName: attachment.attachmentFilename || attachment.getField("title"),
+    });
+    return "";
   }
 }

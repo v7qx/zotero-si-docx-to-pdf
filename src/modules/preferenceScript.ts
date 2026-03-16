@@ -1,4 +1,5 @@
 import { getPref, setPref } from "../utils/prefs";
+import { getString } from "../utils/locale";
 import { FileSystem } from "./fs";
 
 export function registerPrefsScripts(window: Window) {
@@ -163,7 +164,7 @@ export function registerPrefsScripts(window: Window) {
 async function pickLibreOffice(window: Window) {
   const picker = createFilePicker(
     window,
-    "选择 LibreOffice 可执行文件",
+    getString("picker-libreoffice-title"),
     Ci.nsIFilePicker.modeOpen,
   );
   picker.appendFilters(Ci.nsIFilePicker.filterApps);
@@ -183,7 +184,7 @@ async function pickLibreOffice(window: Window) {
 async function pickBackupDirectory(window: Window) {
   const picker = createFilePicker(
     window,
-    "选择 Word 备份文件夹",
+    getString("picker-backup-title"),
     Ci.nsIFilePicker.modeGetFolder,
   );
   const result = await showFilePicker(picker);

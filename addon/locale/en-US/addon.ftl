@@ -1,3 +1,11 @@
 startup-begin = Docx to PDF loading
 startup-finish = Docx to PDF ready
 prefs-title = Docx to PDF
+notify-converted = Automatically converted SI attachment: { $title }
+notify-skip-no-pdf = No existing PDF attachment was found under the same item. This DOC / DOCX attachment was skipped.
+notify-skip-not-ready = The DOC / DOCX attachment has not finished downloading or writing. Automatic conversion was skipped.
+error-invalid-libreoffice-path = Conversion failed: check that the LibreOffice path points to soffice.exe, not swriter.exe or soffice_safe.exe.
+error-libreoffice-process-failed = Conversion failed: the LibreOffice process failed. Batch DOCX imports are handled serially; if this still happens, close any open LibreOffice documents and try again.
+error-conversion = Conversion failed: { $message }
+picker-libreoffice-title = Choose LibreOffice executable
+picker-backup-title = Choose Word backup folder

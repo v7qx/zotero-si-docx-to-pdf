@@ -1,3 +1,11 @@
 startup-begin = Docx to PDF 正在加载
 startup-finish = Docx to PDF 已就绪
 prefs-title = Docx to PDF
+notify-converted = 已自动转换 SI 附件：{ $title }
+notify-skip-no-pdf = 未检测到同一条目下已有 PDF 附件，已跳过该 DOC / DOCX 附件。
+notify-skip-not-ready = DOC / DOCX 附件尚未完成下载或写入，已跳过本次自动转换。
+error-invalid-libreoffice-path = 转换失败：请检查 LibreOffice 路径是否选择了 soffice.exe，而不是 swriter.exe 或 soffice_safe.exe。
+error-libreoffice-process-failed = 转换失败：LibreOffice 进程执行失败。批量导入多个 DOCX 时已改为串行处理；如果仍出现，请先关闭正在打开的 LibreOffice 文档后重试。
+error-conversion = 转换失败：{ $message }
+picker-libreoffice-title = 选择 LibreOffice 可执行文件
+picker-backup-title = 选择 Word 备份文件夹

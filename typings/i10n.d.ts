@@ -3,6 +3,14 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
+  | 'error-conversion'
+  | 'error-invalid-libreoffice-path'
+  | 'error-libreoffice-process-failed'
+  | 'notify-converted'
+  | 'notify-skip-no-pdf'
+  | 'notify-skip-not-ready'
+  | 'picker-backup-title'
+  | 'picker-libreoffice-title'
   | 'pref-backend'
   | 'pref-backend-libreoffice'
   | 'pref-backend-word'
