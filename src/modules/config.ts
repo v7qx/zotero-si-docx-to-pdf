@@ -1,8 +1,11 @@
 import { getPref, setPref } from "../utils/prefs";
 import { FileSystem } from "./fs";
-import { Logger } from "./logger";
 
-export type Backend = "auto" | "libreoffice" | "word-windows-only";
+export type Backend = "libreoffice" | "word-windows-only";
+
+function defaultBackend(): Backend {
+  return Zotero.isWin ? "word-windows-only" : "libreoffice";
+}
 
 export interface PluginPrefs {
   deleteOriginal: boolean;
@@ -24,7 +27,7 @@ export const DEFAULT_PREFS: PluginPrefs = {
   backupDirectory: "",
   titleTemplate:
     'SI-{{ year suffix="-" }}{{ authors max="1" suffix="-" }}{{ title truncate="100" }}',
-  backend: "auto",
+  backend: defaultBackend(),
   libreOfficePath: "",
   showNotifications: true,
   restrictByKeywords: false,
@@ -101,8 +104,10 @@ export class PluginConfig {
     fallback: Backend,
   ): Backend {
     const value = this.getString(key, fallback);
-    return value === "auto" ||
-      value === "libreoffice" ||
+    if (value === "auto" || value === "__default__") {
+      return defaultBackend();
+    }
+    return value === "libreoffice" ||
       value === "word-windows-only"
       ? value
       : fallback;
@@ -116,12 +121,7 @@ export class PluginConfig {
     if (!value || value === "undefined" || value === "null" || !FileSystem.exists(value)) {
       return "";
     }
-    const name = FileSystem.leafName(value).toLowerCase();
-    if (name === "soffice.exe" || name === "soffice") {
-      return value;
-    }
-    Logger.warn("Ignoring invalid LibreOffice executable path", { value });
-    return "";
+    return value;
   }
 
   private static getBackupDirectory(): string {

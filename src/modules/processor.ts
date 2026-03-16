@@ -20,7 +20,15 @@ export class Processor {
       backend: prefs.backend,
     });
 
-    const conversion = await Converter.convert(candidate, prefs);
+    let conversion;
+    try {
+      conversion = await Converter.convert(candidate, prefs);
+    } catch (error) {
+      if (prefs.showNotifications) {
+        ZoteroItems.notify(this.buildConversionErrorMessage(error), true);
+      }
+      throw error;
+    }
     try {
       const title = TitleTemplate.render(candidate.parentItem, prefs.titleTemplate);
       const imported = await ZoteroItems.importPdf(
@@ -126,5 +134,16 @@ export class Processor {
       const fallback = new RegExp("si|supplement|supplementary", "i");
       return Boolean(fileName && fallback.test(fileName));
     }
+  }
+
+  private static buildConversionErrorMessage(error: unknown): string {
+    const message = String(error);
+    if (
+      message.includes("Invalid LibreOffice executable") ||
+      message.includes("LibreOffice executable not found")
+    ) {
+      return "转换失败：请检查 LibreOffice 路径是否选择了 soffice.exe，而不是 swriter.exe 或 soffice_safe.exe。";
+    }
+    return `转换失败：${message}`;
   }
 }

@@ -12,9 +12,8 @@ export class Converter {
         return this.convertWithLibreOffice(candidate, prefs);
       case "word-windows-only":
         return this.convertWithWord(candidate);
-      case "auto":
       default:
-        return this.convertAutomatically(candidate, prefs);
+        return this.convertWithWord(candidate);
     }
   }
 
@@ -22,33 +21,6 @@ export class Converter {
     for (const tempPath of conversion.tempPaths) {
       FileSystem.remove(tempPath, true);
     }
-  }
-
-  private static async convertAutomatically(
-    candidate: CandidateContext,
-    prefs: PluginPrefs,
-  ): Promise<ConversionResult> {
-    const errors: string[] = [];
-    if (Zotero.isWin) {
-      try {
-        return await this.convertWithWord(candidate);
-      } catch (error) {
-        errors.push(`Word: ${String(error)}`);
-      }
-      try {
-        return await this.convertWithLibreOffice(candidate, prefs);
-      } catch (error) {
-        errors.push(`LibreOffice: ${String(error)}`);
-      }
-      throw new Error(errors.join(" | "));
-    }
-
-    try {
-      return await this.convertWithLibreOffice(candidate, prefs);
-    } catch (error) {
-      errors.push(`LibreOffice: ${String(error)}`);
-    }
-    throw new Error(errors.join(" | "));
   }
 
   private static async convertWithLibreOffice(
@@ -66,6 +38,12 @@ export class Converter {
       ]);
     if (!executable) {
       throw new Error("LibreOffice executable not found");
+    }
+    const executableName = FileSystem.leafName(executable).toLowerCase();
+    if (executableName !== "soffice.exe" && executableName !== "soffice") {
+      throw new Error(
+        "Invalid LibreOffice executable. Please choose soffice.exe instead of swriter.exe or soffice_safe.exe.",
+      );
     }
 
     const tempDir = FileSystem.createUniqueTempDir("siwordpdf-lo-");
@@ -110,7 +88,7 @@ export class Converter {
       tempDir,
       `${FileSystem.basenameWithoutExtension(candidate.filePath)}.pdf`,
     );
-    const scriptPath = FileSystem.join(tempDir, "word-to-pdf.vbs");
+    const scriptPath = FileSystem.join(tempDir, "docx-to-pdf.vbs");
     FileSystem.writeUtf8(scriptPath, this.wordExportScript());
     await ProcessRunner.exec(wscript, [
       "//B",

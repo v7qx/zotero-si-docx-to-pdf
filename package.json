@@ -1,10 +1,10 @@
 {
   "name": "zotero-si-docx-to-pdf",
   "type": "module",
-  "version": "1.0.10",
+  "version": "0.0.18",
   "description": "用于 Zotero 8 的 SI DOCX 附件转 PDF 插件。",
   "config": {
-    "addonName": "Word to PDF",
+    "addonName": "Docx to PDF",
     "addonID": "si-word-pdf@example.org",
     "addonRef": "siwordpdf",
     "addonInstance": "SIWordPDF",
@@ -14,7 +14,7 @@
     "type": "git",
     "url": "git+https://github.com/v7qx/zotero-si-docx-to-pdf.git"
   },
-  "author": "Word to PDF Contributors",
+  "author": "Powered by Codex",
   "bugs": {
     "url": "https://github.com/v7qx/zotero-si-docx-to-pdf/issues"
   },

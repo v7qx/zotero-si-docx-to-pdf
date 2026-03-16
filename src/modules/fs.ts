@@ -1,4 +1,6 @@
 export class FileSystem {
+  private static readonly BACKUP_CONTAINER_NAME = "docx-to-pdf-backups";
+
   static toFile(path: string): nsIFile {
     const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
     file.initWithPath(path);
@@ -40,7 +42,7 @@ export class FileSystem {
   }
 
   static defaultBackupDirectory(): string {
-    return this.join(Zotero.DataDirectory.dir, "word-to-pdf-backups");
+    return this.join(Zotero.DataDirectory.dir, this.BACKUP_CONTAINER_NAME);
   }
 
   static ensureDirectory(path: string): string {
@@ -56,21 +58,43 @@ export class FileSystem {
     if (!source.exists()) {
       throw new Error(`Source file not found: ${sourcePath}`);
     }
-    const root = this.toFile(rootDir);
-    if (!root.exists()) {
-      root.create(Ci.nsIFile.DIRECTORY_TYPE as number, 0o755);
-    }
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/[:]/g, "-")
-      .replace(/\..+$/, "");
-    const targetDir = this.toFile(root.path);
-    targetDir.append(`backup-${timestamp}`);
-    targetDir.createUnique(Ci.nsIFile.DIRECTORY_TYPE as number, 0o755);
+    const backupRoot = this.resolveBackupRoot(rootDir);
+    const targetDir = this.toFile(backupRoot.path);
+    targetDir.append(this.nextBackupFolderName(backupRoot));
+    targetDir.create(Ci.nsIFile.DIRECTORY_TYPE as number, 0o755);
     source.copyTo(targetDir, source.leafName);
     const target = this.toFile(targetDir.path);
     target.append(source.leafName);
     return target.path;
+  }
+
+  private static resolveBackupRoot(rootDir: string): nsIFile {
+    const selectedRoot = this.toFile(rootDir);
+    if (!selectedRoot.exists()) {
+      selectedRoot.create(Ci.nsIFile.DIRECTORY_TYPE as number, 0o755);
+    }
+    if (selectedRoot.leafName === this.BACKUP_CONTAINER_NAME) {
+      return selectedRoot;
+    }
+    const backupRoot = this.toFile(selectedRoot.path);
+    backupRoot.append(this.BACKUP_CONTAINER_NAME);
+    if (!backupRoot.exists()) {
+      backupRoot.create(Ci.nsIFile.DIRECTORY_TYPE as number, 0o755);
+    }
+    return backupRoot;
+  }
+
+  private static nextBackupFolderName(rootDir: nsIFile): string {
+    const datePart = new Date().toISOString().slice(0, 10);
+    let index = 1;
+    while (true) {
+      const candidate = this.toFile(rootDir.path);
+      candidate.append(`backup-${datePart}-${index}`);
+      if (!candidate.exists()) {
+        return candidate.leafName;
+      }
+      index += 1;
+    }
   }
 
   static basenameWithoutExtension(path: string): string {

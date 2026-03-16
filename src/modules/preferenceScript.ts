@@ -2,8 +2,13 @@ import { getPref, setPref } from "../utils/prefs";
 import { FileSystem } from "./fs";
 
 export function registerPrefsScripts(window: Window) {
-  addon.data.prefs = { window };
   const doc = window.document;
+  const root = doc.documentElement;
+  if (root?.getAttribute("data-siwordpdf-prefs-bound") === "true") {
+    return;
+  }
+  root?.setAttribute("data-siwordpdf-prefs-bound", "true");
+  addon.data.prefs = { window };
 
   const deleteOriginal = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-deleteOriginal`,
@@ -13,6 +18,12 @@ export function registerPrefsScripts(window: Window) {
   ) as XUL.Checkbox | null;
   const backupDirectory = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-backupDirectory`,
+  ) as HTMLInputElement | null;
+  const backend = doc.querySelector(
+    `#zotero-prefpane-${addon.data.config.addonRef}-backend`,
+  ) as XUL.MenuList | null;
+  const libreOfficePath = doc.querySelector(
+    `#zotero-prefpane-${addon.data.config.addonRef}-libreOfficePath`,
   ) as HTMLInputElement | null;
   if (deleteOriginal) {
     deleteOriginal.disabled = false;
@@ -33,14 +44,14 @@ export function registerPrefsScripts(window: Window) {
   const browseButton = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-browseLibreOffice`,
   );
-  bindButtonActivate(browseButton, () => {
-    pickLibreOffice(window);
+  bindButtonActivate(browseButton, async () => {
+    await pickLibreOffice(window);
   });
   const browseBackupButton = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-browseBackupDirectory`,
   );
-  bindButtonActivate(browseBackupButton, () => {
-    pickBackupDirectory(window);
+  bindButtonActivate(browseBackupButton, async () => {
+    await pickBackupDirectory(window);
   });
 
   const keywordPattern = doc.querySelector(
@@ -63,6 +74,15 @@ export function registerPrefsScripts(window: Window) {
         !deleteOriginal.checked || !backupBeforeDelete.checked;
     }
   };
+  const updateBackendState = () => {
+    const usingLibreOffice = backend?.value === "libreoffice";
+    if (libreOfficePath) {
+      libreOfficePath.disabled = !usingLibreOffice;
+    }
+    if (browseButton) {
+      (browseButton as HTMLButtonElement).disabled = !usingLibreOffice;
+    }
+  };
   if (restrict) {
     restrict.checked = safeGetBool("restrictByKeywords");
     restrict.addEventListener("command", () => {
@@ -72,6 +92,7 @@ export function registerPrefsScripts(window: Window) {
   }
   window.setTimeout(updateKeywordState, 0);
   window.setTimeout(updateDeleteState, 0);
+  window.setTimeout(updateBackendState, 0);
 
   const titleTemplate = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-titleTemplate`,
@@ -95,6 +116,26 @@ export function registerPrefsScripts(window: Window) {
       setPref("backupDirectory", backupDirectory.value.trim());
     });
   }
+  if (libreOfficePath) {
+    libreOfficePath.value = safeGetString("libreOfficePath");
+    libreOfficePath.addEventListener("input", () => {
+      setPref("libreOfficePath", libreOfficePath.value.trim());
+    });
+  }
+  if (backend) {
+    const normalizedValue =
+      safeGetString("backend") === "libreoffice"
+        ? "libreoffice"
+        : Zotero.isWin
+          ? "word-windows-only"
+          : "libreoffice";
+    backend.value = normalizedValue;
+    setPref("backend", normalizedValue);
+    backend.addEventListener("command", () => {
+      setPref("backend", backend.value as any);
+      updateBackendState();
+    });
+  }
 
   const renameDocLink = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-renameDocLink`,
@@ -105,14 +146,14 @@ export function registerPrefsScripts(window: Window) {
   });
 }
 
-function pickLibreOffice(window: Window) {
+async function pickLibreOffice(window: Window) {
   const picker = createFilePicker(
     window,
     "选择 LibreOffice 可执行文件",
     Ci.nsIFilePicker.modeOpen,
   );
   picker.appendFilters(Ci.nsIFilePicker.filterApps);
-  const result = picker.show();
+  const result = await showFilePicker(picker);
   if (result === Ci.nsIFilePicker.returnOK && picker.file) {
     const input = window.document.querySelector(
       `#zotero-prefpane-${addon.data.config.addonRef}-libreOfficePath`,
@@ -125,13 +166,13 @@ function pickLibreOffice(window: Window) {
   }
 }
 
-function pickBackupDirectory(window: Window) {
+async function pickBackupDirectory(window: Window) {
   const picker = createFilePicker(
     window,
     "选择 Word 备份文件夹",
     Ci.nsIFilePicker.modeGetFolder,
   );
-  const result = picker.show();
+  const result = await showFilePicker(picker);
   if (result === Ci.nsIFilePicker.returnOK && picker.file) {
     const input = window.document.querySelector(
       `#zotero-prefpane-${addon.data.config.addonRef}-backupDirectory`,
@@ -145,7 +186,12 @@ function pickBackupDirectory(window: Window) {
 }
 
 function safeGetString(
-  key: "titleTemplate" | "keywordPattern" | "backupDirectory",
+  key:
+    | "titleTemplate"
+    | "keywordPattern"
+    | "backupDirectory"
+    | "libreOfficePath"
+    | "backend",
 ): string {
   try {
     const value = String(getPref(key) || "").trim();
@@ -170,13 +216,30 @@ function safeGetBool(
 
 function bindButtonActivate(
   button: Element | null,
-  handler: () => void,
+  handler: () => Promise<void> | void,
 ): void {
   if (!button) {
     return;
   }
-  button.addEventListener("command", handler);
-  button.addEventListener("click", handler);
+  let busy = false;
+  const wrapped = async (event: Event) => {
+    event.preventDefault();
+    if (busy) {
+      return;
+    }
+    busy = true;
+    try {
+      await handler();
+    } catch (error) {
+      Zotero.logError(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    } finally {
+      busy = false;
+    }
+  };
+  button.addEventListener("command", wrapped);
+  button.addEventListener("click", wrapped);
 }
 
 function createFilePicker(
@@ -193,4 +256,22 @@ function createFilePicker(
     picker.init(window as any, title, mode);
   }
   return picker;
+}
+
+function showFilePicker(picker: any): Promise<number> {
+  return new Promise((resolve, reject) => {
+    try {
+      if (typeof picker.open === "function") {
+        picker.open((result: number) => resolve(result));
+        return;
+      }
+      if (typeof picker.show === "function") {
+        resolve(picker.show());
+        return;
+      }
+      reject(new Error("File picker API is unavailable"));
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
