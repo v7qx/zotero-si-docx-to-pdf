@@ -98,7 +98,8 @@ export class Processor {
     }
 
     let hasSiblingPdf = false;
-    for (const siblingID of parentItem.getAttachments()) {
+    const siblingIDs = parentItem.isRegularItem() ? parentItem.getAttachments() : [];
+    for (const siblingID of siblingIDs) {
       if (siblingID === attachment.id) {
         continue;
       }

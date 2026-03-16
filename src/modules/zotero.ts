@@ -12,6 +12,8 @@ export interface ConversionResult {
 }
 
 export class ZoteroItems {
+  private static readonly MAX_FILENAME_BASE_LENGTH = 120;
+
   static async importPdf(
     parentItem: Zotero.Item,
     pdfPath: string,
@@ -35,12 +37,15 @@ export class ZoteroItems {
     attachment: Zotero.Item,
     baseName: string,
   ): Promise<void> {
-    const safeBaseName = baseName.trim();
+    const safeBaseName = this.sanitizeFilenameBase(baseName);
     if (!safeBaseName) {
       return;
     }
     try {
-      await attachment.renameAttachmentFile(`${safeBaseName}.pdf`, false, true);
+      await (attachment as any).renameAttachmentFile(`${safeBaseName}.pdf`, {
+        overwrite: false,
+        unique: true,
+      });
     } catch (_error) {
       return;
     }
@@ -74,5 +79,14 @@ export class ZoteroItems {
     const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
     file.initWithPath(path);
     return file;
+  }
+
+  private static sanitizeFilenameBase(baseName: string): string {
+    return baseName
+      .replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/[. ]+$/g, "")
+      .trim()
+      .slice(0, this.MAX_FILENAME_BASE_LENGTH);
   }
 }

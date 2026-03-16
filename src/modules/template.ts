@@ -4,9 +4,9 @@ export class TitleTemplate {
   static render(parentItem: Zotero.Item, template: string): string {
     const safeTemplate = (template || "").trim() || DEFAULT_TITLE;
     try {
-      const rendered = Zotero.Attachments.getFileBaseNameFromItem(
+      const rendered = (Zotero.Attachments as any).getFileBaseNameFromItem(
         parentItem,
-        safeTemplate,
+        { formatString: safeTemplate },
       );
       return rendered.replace(/\s+/g, " ").trim() || DEFAULT_TITLE;
     } catch (_error) {
