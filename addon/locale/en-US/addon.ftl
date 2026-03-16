@@ -1,3 +1,3 @@
-startup-begin = Word to PDF loading
-startup-finish = Word to PDF ready
-prefs-title = Word to PDF
+startup-begin = Docx to PDF loading
+startup-finish = Docx to PDF ready
+prefs-title = Docx to PDF

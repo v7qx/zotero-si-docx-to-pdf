@@ -4,11 +4,9 @@
 // @ts-nocheck
 export type FluentMessageId =
   | 'pref-backend'
-  | 'pref-backend-auto'
   | 'pref-backend-libreoffice'
   | 'pref-backend-word'
   | 'pref-backupBeforeDelete'
-  | 'pref-backupBeforeDelete-note'
   | 'pref-backupDirectory'
   | 'pref-backupDirectory-browse'
   | 'pref-backupDirectory-note'
@@ -20,6 +18,10 @@ export type FluentMessageId =
   | 'pref-keywordPattern-note'
   | 'pref-libreOfficePath'
   | 'pref-libreOfficePath-browse'
+  | 'pref-renameMode'
+  | 'pref-renameMode-note'
+  | 'pref-renameMode-titleAndFile'
+  | 'pref-renameMode-titleOnly'
   | 'pref-restrictByKeywords'
   | 'pref-showNotifications'
   | 'pref-title'
