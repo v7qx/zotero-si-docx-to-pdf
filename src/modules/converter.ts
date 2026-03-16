@@ -3,6 +3,12 @@ import { FileSystem, ProcessRunner } from "./fs";
 import { CandidateContext, ConversionResult } from "./zotero";
 
 export class Converter {
+  private static readonly LIBREOFFICE_EXECUTABLE_NAMES = new Set([
+    "soffice.exe",
+    "soffice",
+    "libreoffice",
+  ]);
+
   static async convert(
     candidate: CandidateContext,
     prefs: PluginPrefs,
@@ -33,16 +39,18 @@ export class Converter {
         "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
         "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe",
         "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+        "/usr/bin/soffice",
         "/usr/bin/libreoffice",
+        "/snap/bin/soffice",
         "/snap/bin/libreoffice",
       ]);
     if (!executable) {
       throw new Error("LibreOffice executable not found");
     }
     const executableName = FileSystem.leafName(executable).toLowerCase();
-    if (executableName !== "soffice.exe" && executableName !== "soffice") {
+    if (!this.LIBREOFFICE_EXECUTABLE_NAMES.has(executableName)) {
       throw new Error(
-        "Invalid LibreOffice executable. Please choose soffice.exe instead of swriter.exe or soffice_safe.exe.",
+        "Invalid LibreOffice executable. Please choose soffice (Windows: soffice.exe) or libreoffice, not swriter or soffice_safe.",
       );
     }
 
