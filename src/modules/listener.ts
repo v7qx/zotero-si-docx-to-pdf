@@ -44,13 +44,15 @@ export class EventListener {
     };
 
     this.notifierID = Zotero.Notifier.registerObserver(callback, ["item"]);
-    Zotero.Plugins.addObserver({
-      shutdown: ({ id }) => {
-        if (id === addon.data.config.addonID) {
-          this.unregister();
-        }
-      },
-    });
+    if (typeof Zotero.Plugins?.addObserver === "function") {
+      Zotero.Plugins.addObserver({
+        shutdown: ({ id }) => {
+          if (id === addon.data.config.addonID) {
+            this.unregister();
+          }
+        },
+      });
+    }
     Logger.debug("Attachment notifier registered");
   }
 

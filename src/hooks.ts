@@ -7,8 +7,8 @@ import { createZToolkit } from "./utils/ztoolkit";
 async function onStartup() {
   await Promise.all([
     Zotero.initializationPromise,
-    Zotero.unlockPromise,
-    Zotero.uiReadyPromise,
+    Zotero.unlockPromise || Promise.resolve(),
+    Zotero.uiReadyPromise || Promise.resolve(),
   ]);
 
   initLocale();
