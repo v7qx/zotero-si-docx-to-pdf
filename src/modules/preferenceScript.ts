@@ -23,6 +23,9 @@ export function registerPrefsScripts(window: Window) {
   const renameMode = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-renameMode`,
   ) as XUL.MenuList | null;
+  const renamePdfSi = doc.querySelector(
+    `#zotero-prefpane-${addon.data.config.addonRef}-renamePdfSi`,
+  ) as XUL.Checkbox | null;
   const backend = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-backend`,
   ) as XUL.MenuList | null;
@@ -151,6 +154,12 @@ export function registerPrefsScripts(window: Window) {
       setPref("renameMode", renameMode.value as any);
     });
   }
+  if (renamePdfSi) {
+    renamePdfSi.checked = safeGetBool("renamePdfSi");
+    renamePdfSi.addEventListener("command", () => {
+      setPref("renamePdfSi", renamePdfSi.checked);
+    });
+  }
 
   const renameDocLink = doc.querySelector(
     `#zotero-prefpane-${addon.data.config.addonRef}-renameDocLink`,
@@ -221,7 +230,11 @@ function safeGetString(
 }
 
 function safeGetBool(
-  key: "deleteOriginal" | "restrictByKeywords" | "backupBeforeDelete",
+  key:
+    | "deleteOriginal"
+    | "restrictByKeywords"
+    | "backupBeforeDelete"
+    | "renamePdfSi",
 ): boolean {
   try {
     return Boolean(getPref(key));

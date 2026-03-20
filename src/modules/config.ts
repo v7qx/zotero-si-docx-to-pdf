@@ -14,6 +14,7 @@ export interface PluginPrefs {
   backupDirectory: string;
   titleTemplate: string;
   renameMode: RenameMode;
+  renamePdfSi: boolean;
   backend: Backend;
   libreOfficePath: string;
   showNotifications: boolean;
@@ -27,9 +28,9 @@ export const DEFAULT_PREFS: PluginPrefs = {
   deleteOriginal: false,
   backupBeforeDelete: true,
   backupDirectory: "",
-  titleTemplate:
-    'SI-{{ year suffix="-" }}{{ authors max="1" suffix="-" }}{{ title truncate="100" }}',
+  titleTemplate: "SI-{{ citationKey }}",
   renameMode: "title-only",
+  renamePdfSi: false,
   backend: defaultBackend(),
   libreOfficePath: "",
   showNotifications: true,
@@ -51,6 +52,7 @@ export class PluginConfig {
       backupDirectory: this.getBackupDirectory(),
       titleTemplate: this.getString("titleTemplate", DEFAULT_PREFS.titleTemplate),
       renameMode: this.getRenameMode("renameMode", DEFAULT_PREFS.renameMode),
+      renamePdfSi: this.getBool("renamePdfSi", DEFAULT_PREFS.renamePdfSi),
       backend: this.getBackend("backend", DEFAULT_PREFS.backend),
       libreOfficePath: this.getLibreOfficePath(),
       showNotifications: this.getBool(

@@ -18,11 +18,23 @@ export class Processor {
       return;
     }
 
-    Logger.debug("Found matching Word attachment", {
+    Logger.debug("Found matching SI attachment", {
       itemID,
       fileName: candidate.fileName,
+      kind: candidate.kind,
       backend: prefs.backend,
     });
+
+    const title = TitleTemplate.render(candidate.parentItem, prefs.titleTemplate);
+    if (candidate.kind === "pdf") {
+      await ZoteroItems.applyAttachmentNaming(
+        candidate.parentItem,
+        candidate.attachment,
+        title,
+        prefs.renameMode,
+      );
+      return;
+    }
 
     let conversion;
     try {
@@ -34,7 +46,6 @@ export class Processor {
       throw error;
     }
     try {
-      const title = TitleTemplate.render(candidate.parentItem, prefs.titleTemplate);
       const imported = await ZoteroItems.importPdf(
         candidate.parentItem,
         conversion.outputPath,
@@ -87,7 +98,12 @@ export class Processor {
     const fileName =
       attachment.attachmentFilename ||
       attachment.getField("title");
-    if (!fileName || !/\.(doc|docx)$/i.test(fileName)) {
+    const isWord = Boolean(fileName && /\.(doc|docx)$/i.test(fileName));
+    const isPdf = attachment.isPDFAttachment() || Boolean(fileName && /\.pdf$/i.test(fileName));
+    if (!isWord && !isPdf) {
+      return null;
+    }
+    if (isPdf && !prefs.renamePdfSi) {
       return null;
     }
 
@@ -99,6 +115,7 @@ export class Processor {
     }
 
     if (
+      isWord &&
       prefs.restrictByKeywords &&
       !this.matchesKeyword(fileName, prefs.keywordPattern)
     ) {
@@ -132,6 +149,7 @@ export class Processor {
     }
 
     return {
+      kind: isPdf ? "pdf" : "word",
       attachment,
       parentItem,
       fileName,

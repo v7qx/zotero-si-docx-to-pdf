@@ -12,6 +12,7 @@ declare namespace _ZoteroTypes {
       "backupDirectory": string;
       "titleTemplate": string;
       "renameMode": string;
+      "renamePdfSi": boolean;
       "backend": string;
       "libreOfficePath": string;
       "showNotifications": boolean;

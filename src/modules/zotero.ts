@@ -1,7 +1,10 @@
 import { type RenameMode } from "./config";
 import { FileSystem } from "./fs";
 
+export type CandidateKind = "word" | "pdf";
+
 export interface CandidateContext {
+  kind: CandidateKind;
   attachment: Zotero.Item;
   parentItem: Zotero.Item;
   fileName: string;
@@ -29,35 +32,69 @@ export class ZoteroItems {
     return imported;
   }
 
+  static async applyAttachmentNaming(
+    parentItem: Zotero.Item,
+    attachment: Zotero.Item,
+    baseName: string,
+    renameMode: RenameMode,
+  ): Promise<{ title: string; changed: boolean }> {
+    const attachmentPath = await attachment.getFilePathAsync();
+    const resolvedPath = typeof attachmentPath === "string" ? attachmentPath : "";
+    const extension = this.getAttachmentExtension(attachment, resolvedPath);
+    const plan = await this.buildUniqueNamePlan(
+      parentItem,
+      attachment,
+      baseName,
+      renameMode,
+      extension,
+    );
+    const currentTitle = String(attachment.getField("title") || "").trim();
+    const currentFileBase = this.getAttachmentFileBase(attachment, resolvedPath);
+    const shouldUpdateTitle = currentTitle !== plan.title;
+    const shouldRenameFile =
+      renameMode === "title-and-file" &&
+      Boolean(plan.fileName) &&
+      currentFileBase.toLocaleLowerCase() !== plan.fileBase.toLocaleLowerCase();
+
+    let changed = false;
+    if (shouldUpdateTitle) {
+      attachment.setField("title", plan.title);
+      if (typeof attachment.saveTx === "function") {
+        await attachment.saveTx();
+      } else {
+        await attachment.save();
+      }
+      changed = true;
+    }
+
+    if (shouldRenameFile && plan.fileName) {
+      try {
+        await (attachment as any).renameAttachmentFile(plan.fileName, {
+          overwrite: false,
+          unique: true,
+        });
+      } catch (_error) {
+        return { title: plan.title, changed };
+      }
+      changed = true;
+    }
+
+    return { title: plan.title, changed };
+  }
+
   static async applyImportedPdfNaming(
     parentItem: Zotero.Item,
     attachment: Zotero.Item,
     baseName: string,
     renameMode: RenameMode,
   ): Promise<string> {
-    const plan = await this.buildUniqueNamePlan(
+    const result = await this.applyAttachmentNaming(
       parentItem,
       attachment,
       baseName,
       renameMode,
     );
-    attachment.setField("title", plan.title);
-    if (typeof attachment.saveTx === "function") {
-      await attachment.saveTx();
-    } else {
-      await attachment.save();
-    }
-    if (renameMode === "title-and-file") {
-      try {
-        await (attachment as any).renameAttachmentFile(`${plan.fileBase}.pdf`, {
-          overwrite: false,
-          unique: true,
-        });
-      } catch (_error) {
-        return plan.title;
-      }
-    }
-    return plan.title;
+    return result.title;
   }
 
   static notify(message: string, asError = false) {
@@ -135,7 +172,8 @@ export class ZoteroItems {
     attachment: Zotero.Item,
     baseName: string,
     renameMode: RenameMode,
-  ): Promise<{ title: string; fileBase: string }> {
+    extension: string,
+  ): Promise<{ title: string; fileBase: string; fileName: string }> {
     const existingTitles = new Set<string>();
     const existingFileBases = new Set<string>();
     for (const siblingID of parentItem.getAttachments()) {
@@ -172,10 +210,37 @@ export class ZoteroItems {
         renameMode === "title-and-file" &&
         existingFileBases.has(fileBase.toLocaleLowerCase());
       if (!titleExists && !fileExists) {
-        return { title, fileBase };
+        return {
+          title,
+          fileBase,
+          fileName: extension ? `${fileBase}.${extension}` : "",
+        };
       }
       index += 1;
     }
+  }
+
+  private static getAttachmentExtension(
+    attachment: Zotero.Item,
+    filePath: string,
+  ): string {
+    const fileName =
+      (filePath && FileSystem.leafName(filePath)) ||
+      String(attachment.attachmentFilename || "").trim();
+    const match = fileName.match(/\.([^.]+)$/);
+    return match ? match[1].toLocaleLowerCase() : "";
+  }
+
+  private static getAttachmentFileBase(
+    attachment: Zotero.Item,
+    filePath: string,
+  ): string {
+    if (filePath) {
+      return FileSystem.basenameWithoutExtension(filePath).trim();
+    }
+    return String(attachment.attachmentFilename || "")
+      .replace(/\.[^.]+$/u, "")
+      .trim();
   }
 
   private static sanitizeFilenameBase(baseName: string, suffix = ""): string {

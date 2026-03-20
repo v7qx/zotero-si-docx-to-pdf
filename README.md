@@ -14,7 +14,3 @@ A Zotero plugin for converting Supplementary Information Word attachments into P
 When an eligible `.doc` or `.docx` child attachment is added to an item, the plugin uses Microsoft Word or LibreOffice to convert it and adds the generated PDF back to the same item.
 
 This plugin was developed with the assistance of artificial intelligence.
-
-## License
-
-AGPL-3.0-or-later. See [`LICENSE`](LICENSE).
